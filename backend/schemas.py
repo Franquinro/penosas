@@ -41,3 +41,10 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: Optional[str] = None
+
+class AnnualRate(BaseModel):
+    year: int
+    rate: float
+
+    class Config:
+        from_attributes = True

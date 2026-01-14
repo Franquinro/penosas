@@ -26,3 +26,9 @@ class WorkEntry(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
 
     owner = relationship("User", back_populates="entries")
+
+class AnnualRate(Base):
+    __tablename__ = "annual_rates"
+
+    year = Column(Integer, primary_key=True)
+    rate = Column(Float) # Euros per hour

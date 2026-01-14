@@ -26,7 +26,7 @@ const AdminDashboard: React.FC = () => {
     const [summary, setSummary] = useState<Summary | null>(null);
     const [users, setUsers] = useState<User[]>([]);
     const [isExporting, setIsExporting] = useState(false);
-    const [activeTab, setActiveTab] = useState<'activity' | 'users'>('activity');
+    const [activeTab, setActiveTab] = useState<'activity' | 'users' | 'rates'>('activity');
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -86,6 +86,74 @@ const AdminDashboard: React.FC = () => {
         } finally {
             setIsExporting(false);
         }
+    };
+
+    // Sub-component for Rates Management
+    const RatesTab = () => {
+        const [rates, setRates] = useState<Array<{ year: number; rate: number }>>([]);
+        const [year, setYear] = useState(new Date().getFullYear());
+        const [rate, setRate] = useState(10);
+        const [loading, setLoading] = useState(false);
+
+        const fetchRates = async () => {
+            try {
+                const res = await api.get('/admin/rates');
+                setRates(res.data);
+            } catch (err) { console.error(err); }
+        };
+
+        useEffect(() => { fetchRates(); }, []);
+
+        const saveRate = async (e: React.FormEvent) => {
+            e.preventDefault();
+            setLoading(true);
+            try {
+                await api.post('/admin/rates', { year, rate });
+                fetchRates();
+            } catch (err) { alert('Error al guardar tasa'); }
+            finally { setLoading(false); }
+        };
+
+        return (
+            <div className="rates-section">
+                <div className="section-title">
+                    <h3>Configuración de Tasas (€/hora)</h3>
+                </div>
+                <div className="rates-grid">
+                    <form onSubmit={saveRate} className="rate-form glass-card">
+                        <h4>Añadir / Editar Tasa</h4>
+                        <div className="input-group">
+                            <label>Año</label>
+                            <input type="number" value={year} onChange={e => setYear(Number(e.target.value))} min="2020" max="2050" required />
+                        </div>
+                        <div className="input-group">
+                            <label>Precio Hora (€)</label>
+                            <input type="number" value={rate} onChange={e => setRate(Number(e.target.value))} step="0.01" required />
+                        </div>
+                        <button type="submit" disabled={loading} className="btn-primary mt-2">Guardar</button>
+                    </form>
+                    <div className="rates-list">
+                        {rates.map(r => (
+                            <div key={r.year} className="rate-item glass-card">
+                                <span className="rate-year">{r.year}</span>
+                                <span className="rate-value">{r.rate} €/h</span>
+                            </div>
+                        ))}
+                        {rates.length === 0 && <div className="text-muted">No hay tasas configuradas</div>}
+                    </div>
+                </div>
+                <style>{`
+                    .rates-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+                    .rate-form { display: flex; flex-direction: column; gap: 1rem; padding: 1.5rem; }
+                    .mt-2 { margin-top: 1rem; }
+                    .btn-primary { background: var(--primary); color: white; border: none; padding: 0.5rem; border-radius: 0.5rem; cursor: pointer; }
+                    .rate-item { display: flex; justify-content: space-between; align-items: center; padding: 1rem; border: 1px solid var(--glass-border); margin-bottom: 0.5rem; }
+                    .rate-year { font-weight: bold; }
+                    .rate-value { color: var(--success); font-weight: bold; }
+                    .text-success { color: var(--success); }
+                `}</style>
+            </div>
+        );
     };
 
     return (
@@ -149,10 +217,17 @@ const AdminDashboard: React.FC = () => {
                         <Users size={18} />
                         Usuarios
                     </button>
+                    <button
+                        className={`tab-btn ${activeTab === 'rates' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('rates')}
+                    >
+                        <FileText size={18} />
+                        Tasas/Año
+                    </button>
                 </div>
 
                 <div className="main-content glass-card">
-                    {activeTab === 'activity' ? (
+                    {activeTab === 'activity' && (
                         <div className="activity-section">
                             <div className="section-title">
                                 <h3>Actividad Reciente</h3>
@@ -175,7 +250,9 @@ const AdminDashboard: React.FC = () => {
                                 )}
                             </div>
                         </div>
-                    ) : (
+                    )}
+
+                    {activeTab === 'users' && (
                         <div className="users-section">
                             <div className="section-title">
                                 <h3>Gestión de Usuarios</h3>
@@ -200,6 +277,8 @@ const AdminDashboard: React.FC = () => {
                             </div>
                         </div>
                     )}
+
+                    {activeTab === 'rates' && <RatesTab />}
                 </div>
             </div>
 

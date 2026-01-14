@@ -16,6 +16,13 @@ def seed_data():
         # Define demo users
         demo_users = ["demo1", "demo2"]
         
+        # Seed Rates
+        if not db.query(models.AnnualRate).first():
+            db.add(models.AnnualRate(year=2025, rate=10.5))
+            db.add(models.AnnualRate(year=2026, rate=11.0))
+            db.commit()
+            print("Seeded default annual rates.")
+
         for username in demo_users:
             print(f"Processing user: {username}")
             
@@ -35,7 +42,7 @@ def seed_data():
                 print(f"  Created user {username}")
             else:
                 print(f"  User {username} already exists, clearing previous entries...")
-                # Optional: Clear existing entries for a clean slate
+                # Clear existing entries for a clean slate
                 db.query(models.WorkEntry).filter(models.WorkEntry.user_id == user.id).delete()
                 db.commit()
 
@@ -44,7 +51,7 @@ def seed_data():
             
             # Shifts and Tasks for random selection
             shifts = ["Mañana", "Tarde", "Noche"]
-            tasks = ["Sacos", "Quemadores", "Filtros", "Otros"]
+            tasks = ["Sacos", "Quemadores", "Filtros FO/Lodos"]
 
             for i in range(6):
                 # Calculate year and month
@@ -85,7 +92,8 @@ def seed_data():
                     
                     # Add variance to hours
                     hours = base_hours * random.uniform(0.8, 1.2)
-                    hours = round(hours * 2) / 2 # Round to nearest 0.5 for realism
+                    # Round to 2 decimals, not forcing 0.5 steps
+                    hours = round(hours, 2)
 
                     entry = models.WorkEntry(
                         user_id=user.id,

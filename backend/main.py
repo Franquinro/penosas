@@ -162,12 +162,93 @@ def get_monthly_stats(
             extract('year', models.WorkEntry.date) == year_target
         ).scalar() or 0
         
+        rate = db.query(models.AnnualRate.rate).filter(models.AnnualRate.year == year_target).scalar()
+        if not rate:
+            rate = 0
+            
+        total_euros = total_hours * rate
+        
         stats.append({
             "name": month_label,
-            "hours": total_hours
+            "hours": total_hours,
+            "euros": total_euros,
+            "year": year_target
         })
     
     return stats
+
+@app.get("/export/month")
+def export_user_month(
+    year: int,
+    month: int,
+    current_user: models.User = Depends(auth.get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    import calendar
+    from datetime import date
+    
+    _, last_day = calendar.monthrange(year, month)
+    start_date = date(year, month, 1)
+    end_date = date(year, month, last_day)
+
+    entries = db.query(models.WorkEntry).filter(
+        models.WorkEntry.user_id == current_user.id,
+        models.WorkEntry.date >= start_date, 
+        models.WorkEntry.date <= end_date
+    ).all()
+    
+    data = []
+    for entry in entries:
+        data.append({
+            "Fecha": entry.date,
+            "Turno": entry.shift,
+            "Tarea": entry.task,
+            "Horas": entry.amount,
+            "Horas (HH:MM)": f"{int(entry.amount):02d}:{int(round((entry.amount - int(entry.amount)) * 60)):02d}"
+        })
+    
+    df = pd.DataFrame(data)
+    stream = BytesIO()
+    with pd.ExcelWriter(stream) as writer:
+        df.to_excel(writer, index=False)
+    
+    stream.seek(0)
+    month_name = calendar.month_name[month]
+    filename = f"resumen_{current_user.username}_{month_name}_{year}.xlsx"
+    
+    headers = {
+        'Content-Disposition': f'attachment; filename="{filename}"'
+    }
+    return StreamingResponse(stream, headers=headers, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+@app.post("/admin/rates", response_model=schemas.AnnualRate)
+def create_or_update_rate(
+    rate_data: schemas.AnnualRate,
+    current_user: models.User = Depends(auth.get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    existing = db.query(models.AnnualRate).filter(models.AnnualRate.year == rate_data.year).first()
+    if existing:
+        existing.rate = rate_data.rate
+    else:
+        existing = models.AnnualRate(year=rate_data.year, rate=rate_data.rate)
+        db.add(existing)
+    
+    db.commit()
+    db.refresh(existing)
+    return existing
+
+@app.get("/admin/rates", response_model=List[schemas.AnnualRate])
+def get_rates(
+    current_user: models.User = Depends(auth.get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    return db.query(models.AnnualRate).order_by(models.AnnualRate.year.desc()).all()
 
 # --- ADMIN ENDPOINTS ---
 
