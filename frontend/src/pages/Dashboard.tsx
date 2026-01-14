@@ -21,15 +21,16 @@ const Dashboard: React.FC = () => {
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [shift, setShift] = useState('Mañana');
     const [task, setTask] = useState('Sacos');
-    const [amount, setAmount] = useState<string | number>(8);
+    const [amount, setAmount] = useState<string | number>(1); // Default 1 hour
     const [inputMode, setInputMode] = useState<'decimal' | 'time'>('decimal');
-    const [hours, setHours] = useState(8);
+    const [hours, setHours] = useState(1);
     const [minutes, setMinutes] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
 
     // Filter/Chart State
-    const [chartData, setChartData] = useState([]);
+    const [chartData, setChartData] = useState<any[]>([]);
     const [summaryDate, setSummaryDate] = useState(new Date()); // For monthly summary filter
+    const [chartMode, setChartMode] = useState<'hours' | 'euros'>('hours');
 
     useEffect(() => {
         fetchMonthlyEntries();
@@ -56,6 +57,28 @@ const Dashboard: React.FC = () => {
         }
     };
 
+    // Export function
+    const handleExport = async () => {
+        try {
+            const year = summaryDate.getFullYear();
+            const month = summaryDate.getMonth() + 1;
+            const response = await api.get(`/export/month?year=${year}&month=${month}`, {
+                responseType: 'blob',
+            });
+
+            // Create blob link to download
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `resumen_${year}_${month}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode?.removeChild(link);
+        } catch (err) {
+            alert('Error al exportar');
+        }
+    };
+
     // Input Handlers
     const handleDecimalChange = (val: string) => {
         // Cleaning input
@@ -78,6 +101,15 @@ const Dashboard: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Date validation
+        const selectedYear = new Date(date).getFullYear();
+        const currentYear = new Date().getFullYear();
+        if (selectedYear < 2025 || selectedYear > currentYear) {
+            alert(`Fecha no permitida. Solo años entre 2025 y ${currentYear}.`);
+            return;
+        }
+
         setIsLoading(true);
         let finalAmount = 0;
 
@@ -92,8 +124,8 @@ const Dashboard: React.FC = () => {
             fetchMonthlyEntries();
             fetchChartData();
             // Reset form (keep generic logic)
-            setAmount(8);
-            setHours(8);
+            setAmount(1);
+            setHours(1);
             setMinutes(0);
         } catch (err) {
             alert('Error al guardar la entrada');
@@ -145,9 +177,21 @@ const Dashboard: React.FC = () => {
 
             {/* CHART SECTION */}
             <section className="chart-section glass-card mb-4" style={{ marginBottom: '2rem' }}>
-                <div className="section-title">
-                    <BarChart2 size={20} className="text-primary" />
-                    <h3>Evolución Mensual (Últimos 6 meses)</h3>
+                <div className="section-title space-between">
+                    <div className="d-flex-center">
+                        <BarChart2 size={20} className="text-primary" />
+                        <h3>Evolución Mensual</h3>
+                    </div>
+                    <div className="mode-toggle" style={{ paddingBottom: 0 }}>
+                        <button
+                            className={`mode-btn ${chartMode === 'hours' ? 'active' : ''}`}
+                            onClick={() => setChartMode('hours')}
+                        >Horas</button>
+                        <button
+                            className={`mode-btn ${chartMode === 'euros' ? 'active' : ''}`}
+                            onClick={() => setChartMode('euros')}
+                        >Euros</button>
+                    </div>
                 </div>
                 <div style={{ width: '100%', height: 250 }}>
                     <ResponsiveContainer>
@@ -159,8 +203,19 @@ const Dashboard: React.FC = () => {
                                 contentStyle={{ backgroundColor: 'rgba(23, 23, 23, 0.9)', border: 'none', borderRadius: '8px' }}
                                 itemStyle={{ color: '#fff' }}
                                 cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
+                                formatter={(value: number | undefined) => {
+                                    if (value === undefined) return [];
+                                    return [
+                                        chartMode === 'euros' ? `${value.toFixed(2)} €` : `${value.toFixed(2)} h`,
+                                        chartMode === 'euros' ? 'Euros' : 'Horas'
+                                    ];
+                                }}
                             />
-                            <Bar dataKey="hours" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+                            <Bar
+                                dataKey={chartMode}
+                                fill={chartMode === 'euros' ? '#10b981' : 'var(--primary)'}
+                                radius={[4, 4, 0, 0]}
+                            />
                         </BarChart>
                     </ResponsiveContainer>
                 </div>
@@ -176,7 +231,15 @@ const Dashboard: React.FC = () => {
                     <form onSubmit={handleSubmit}>
                         <div className="input-group">
                             <label className="input-label">Fecha</label>
-                            <input type="date" className="input-field" value={date} onChange={e => setDate(e.target.value)} required />
+                            <input
+                                type="date"
+                                className="input-field"
+                                value={date}
+                                onChange={e => setDate(e.target.value)}
+                                min="2025-01-01"
+                                max={`${new Date().getFullYear()}-12-31`}
+                                required
+                            />
                         </div>
                         <div className="input-group">
                             <label className="input-label">Turno</label>
@@ -191,8 +254,7 @@ const Dashboard: React.FC = () => {
                             <select className="input-field" value={task} onChange={e => setTask(e.target.value)}>
                                 <option>Sacos</option>
                                 <option>Quemadores</option>
-                                <option>Filtros</option>
-                                <option>Otros</option>
+                                <option>Filtros FO/Lodos</option>
                             </select>
                         </div>
 
@@ -259,6 +321,9 @@ const Dashboard: React.FC = () => {
                             <button onClick={() => changeMonth(-1)} className="btn-icon-sm">{'<'}</button>
                             <span>{summaryDate.toLocaleString('es-ES', { month: 'long', year: 'numeric' })}</span>
                             <button onClick={() => changeMonth(1)} className="btn-icon-sm">{'>'}</button>
+                            <button onClick={handleExport} className="btn-icon-sm" title="Descargar Excel">
+                                <FileText size={14} />
+                            </button>
                         </div>
                     </div>
 
