@@ -18,7 +18,7 @@ const Dashboard: React.FC = () => {
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [shift, setShift] = useState('Mañana');
     const [task, setTask] = useState('Sacos');
-    const [amount, setAmount] = useState(8);
+    const [amount, setAmount] = useState<string | number>(8);
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
@@ -37,11 +37,12 @@ const Dashboard: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
+        const normalizedAmount = parseFloat(amount.toString().replace(',', '.'));
         try {
-            await api.post('/entries/', { date, shift, task, amount });
+            await api.post('/entries/', { date, shift, task, amount: normalizedAmount });
             fetchEntries();
             // Reset form (except date)
-            setAmount(8);
+            setAmount("8");
         } catch (err) {
             alert('Error al guardar la entrada');
         } finally {
@@ -110,7 +111,26 @@ const Dashboard: React.FC = () => {
                         </div>
                         <div className="input-group">
                             <label className="input-label">Horas</label>
-                            <input type="number" step="0.5" className="input-field" value={amount} onChange={e => setAmount(Number(e.target.value))} required />
+                            <input
+                                type="text"
+                                className="input-field"
+                                value={amount}
+                                onChange={e => {
+                                    // Permitir solo números, puntos y comas
+                                    const val = e.target.value.replace(/[^0-9.,]/g, '');
+                                    // Normalizar: cambiar puntos por comas (o viceversa según prefiera el usuario)
+                                    // Para que el Backend lo entienda siempre como número, lo trataremos al enviar.
+                                    setAmount(val as any);
+                                }}
+                                onBlur={() => {
+                                    // Al salir, asegurar que el formato sea numérico válido
+                                    const normalized = amount.toString().replace(',', '.');
+                                    if (!isNaN(parseFloat(normalized))) {
+                                        setAmount(normalized as any);
+                                    }
+                                }}
+                                required
+                            />
                         </div>
                         <button type="submit" className="btn btn-primary w-full" disabled={isLoading}>
                             {isLoading ? 'Guardando...' : 'Guardar Horas'}
