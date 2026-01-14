@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 import models, schemas, auth, database
 import pandas as pd
 from io import BytesIO
@@ -95,10 +95,24 @@ def create_work_entry(
 def read_work_entries(
     skip: int = 0,
     limit: int = 100,
+    month: Optional[int] = None,
+    year: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_active_user)
 ):
-    entries = db.query(models.WorkEntry).filter(models.WorkEntry.user_id == current_user.id).offset(skip).limit(limit).all()
+    query = db.query(models.WorkEntry).filter(models.WorkEntry.user_id == current_user.id)
+    
+    if month and year:
+        # Filter for specific month
+        # Calculate start and end date of the month
+        import calendar
+        from datetime import date
+        _, last_day = calendar.monthrange(year, month)
+        start_date = date(year, month, 1)
+        end_date = date(year, month, last_day)
+        query = query.filter(models.WorkEntry.date >= start_date, models.WorkEntry.date <= end_date)
+    
+    entries = query.order_by(models.WorkEntry.date.desc()).offset(skip).limit(limit).all()
     return entries
 
 @app.delete("/entries/{entry_id}")
@@ -113,6 +127,47 @@ def delete_work_entry(
     db.delete(entry)
     db.commit()
     return {"ok": True}
+
+@app.get("/entries/stats/monthly")
+def get_monthly_stats(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    from datetime import date, timedelta
+    from sqlalchemy import func, extract
+    import calendar
+
+    today = date.today()
+    stats = []
+
+    # Get stats for last 6 months (including current)
+    for i in range(5, -1, -1):
+        # Calculate month and year
+        # Logic to handle year wrap around
+        month_target = today.month - i
+        year_target = today.year
+        
+        while month_target <= 0:
+            month_target += 12
+            year_target -= 1
+        
+        month_name = calendar.month_name[month_target][:3] # Jan, Feb... (English system locale default, usually fine or we map manually)
+        # Using spanish mapping for better UX
+        spanish_months = ["", "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+        month_label = spanish_months[month_target]
+
+        total_hours = db.query(func.sum(models.WorkEntry.amount)).filter(
+            models.WorkEntry.user_id == current_user.id,
+            extract('month', models.WorkEntry.date) == month_target,
+            extract('year', models.WorkEntry.date) == year_target
+        ).scalar() or 0
+        
+        stats.append({
+            "name": month_label,
+            "hours": total_hours
+        })
+    
+    return stats
 
 # --- ADMIN ENDPOINTS ---
 
