@@ -135,7 +135,8 @@ def export_data(
             "Date": entry.date,
             "Shift": entry.shift,
             "Task": entry.task,
-            "Hours": entry.amount
+            "Hours (Decimal)": entry.amount,
+            "Format (HH:MM)": f"{int(entry.amount):02d}:{int(round((entry.amount - int(entry.amount)) * 60)):02d}"
         })
     
     df = pd.DataFrame(data)
