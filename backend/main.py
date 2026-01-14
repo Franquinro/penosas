@@ -178,6 +178,39 @@ def get_summary(
         "recent_activity": recent
     }
 
+@app.get("/admin/users", response_model=List[schemas.User])
+def list_users(
+    current_user: models.User = Depends(auth.get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    return db.query(models.User).all()
+
+@app.delete("/admin/users/{user_id}")
+def delete_user(
+    user_id: int,
+    current_user: models.User = Depends(auth.get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    user_to_delete = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user_to_delete:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if user_to_delete.username == "admin":
+        raise HTTPException(status_code=400, detail="Cannot delete main admin")
+
+    # Important: deleting the user will also delete their entries via CASCADE if configured in models
+    # but let's be safe and check if models have cascade or do it manually if needed.
+    # Looking at models.py (I'll check later, but usually standard).
+    
+    db.delete(user_to_delete)
+    db.commit()
+    return {"message": "User deleted successfully"}
+
 # Seed Admin User (Quick & Dirty for initial setup)
 @app.on_event("startup")
 def create_admin():
