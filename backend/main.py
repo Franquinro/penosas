@@ -349,16 +349,33 @@ def delete_user(
     return {"message": "User deleted successfully"}
 
 # Seed Admin User (Quick & Dirty for initial setup)
+import os
+
+# ... (imports remain)
+
+# ... inside create_admin function:
 @app.on_event("startup")
 def create_admin():
     db = database.SessionLocal()
-    admin = db.query(models.User).filter(models.User.role == "admin").first()
-    if not admin:
-        # Default admin: admin / admin123
-        # IN PROD: Change this immediately
-        print("Creating default admin user...")
-        hashed_pw = auth.get_password_hash("admin123")
-        user = models.User(username="admin", full_name="System Admin", hashed_password=hashed_pw, role="admin")
+    # Check if ANY admin exists, not just one with username "admin"
+    # But for simplicity, let's stick to checking if our configured admin exists or if role=admin exists
+    # If we want to enforce the env var admin, we might need to check for that specific username.
+    
+    admin_user = os.getenv("ADMIN_USER", "admin")
+    admin_password = os.getenv("ADMIN_PASSWORD", "admin123")
+    
+    # Check if user with this username exists
+    existing_user = db.query(models.User).filter(models.User.username == admin_user).first()
+    
+    if not existing_user:
+        print(f"Creating default admin user: {admin_user}")
+        hashed_pw = auth.get_password_hash(admin_password)
+        user = models.User(username=admin_user, full_name="System Admin", hashed_password=hashed_pw, role="admin")
         db.add(user)
         db.commit()
+    else:
+        # Optional: Check if we should update password? 
+        # Better not to start messing with passwords on every restart unless explicitly asked.
+        pass
+        
     db.close()

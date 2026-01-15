@@ -9,6 +9,9 @@ services:
       - horas_data:/app/data
     environment:
       - DATA_DIR=/app/data
+      - SECRET_KEY=${SECRET_KEY}
+      - ADMIN_USER=${ADMIN_USER}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
     restart: always
 
   frontend:
