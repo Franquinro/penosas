@@ -85,6 +85,19 @@ def create_user(
 async def read_users_me(current_user: models.User = Depends(auth.get_current_active_user)):
     return current_user
 
+@app.put("/users/me/password")
+def update_password(
+    password_data: schemas.UserPasswordUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    if not auth.verify_password(password_data.old_password, current_user.hashed_password):
+         raise HTTPException(status_code=400, detail="Incorrect old password")
+    
+    current_user.hashed_password = auth.get_password_hash(password_data.new_password)
+    db.commit()
+    return {"message": "Password updated successfully"}
+
 @app.post("/entries/", response_model=schemas.WorkEntry)
 def create_work_entry(
     entry: schemas.WorkEntryCreate,

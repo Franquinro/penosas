@@ -54,7 +54,7 @@ def seed_data():
             
             # Shifts and Tasks for random selection
             shifts = ["Mañana", "Tarde", "Noche"]
-            tasks = ["Sacos", "Quemadores", "Filtros FO/Lodos"]
+            tasks = ["Sacos", "Quemadores", "Filtros FO/Lodos", "Magnesio", "Derrames/Fugas"]
 
             for i in range(6):
                 # Calculate year and month

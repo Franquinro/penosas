@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import api from '../services/api';
-import { Plus, Trash2, Calendar, Clock, LogOut, ShieldCheck, BarChart2, FileText } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Plus, Trash2, Calendar, Clock, LogOut, ShieldCheck, BarChart2, FileText, User, Sun, Moon } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 interface WorkEntry {
@@ -15,6 +16,8 @@ interface WorkEntry {
 
 const Dashboard: React.FC = () => {
     const { user, logout } = useAuth();
+    const { theme, toggleTheme } = useTheme();
+    const navigate = useNavigate();
     const [entries, setEntries] = useState<WorkEntry[]>([]);
 
     // Form State
@@ -162,6 +165,13 @@ const Dashboard: React.FC = () => {
                     <p>Registra tus horas hoy</p>
                 </div>
                 <div className="header-actions">
+                    <button onClick={toggleTheme} className="btn-icon" title="Cambiar Tema">
+                        {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+                    </button>
+                    <button onClick={() => navigate('/profile')} className="btn-icon">
+                        <User size={20} />
+                        <span>Perfil</span>
+                    </button>
                     {user?.role === 'admin' && (
                         <Link to="/admin" className="btn-admin">
                             <ShieldCheck size={20} />
@@ -255,6 +265,8 @@ const Dashboard: React.FC = () => {
                                 <option>Sacos</option>
                                 <option>Quemadores</option>
                                 <option>Filtros FO/Lodos</option>
+                                <option>Magnesio</option>
+                                <option>Derrames/Fugas</option>
                             </select>
                         </div>
 
@@ -321,11 +333,20 @@ const Dashboard: React.FC = () => {
                             <button onClick={() => changeMonth(-1)} className="btn-icon-sm">{'<'}</button>
                             <span>{summaryDate.toLocaleString('es-ES', { month: 'long', year: 'numeric' })}</span>
                             <button onClick={() => changeMonth(1)} className="btn-icon-sm">{'>'}</button>
-                            <button onClick={handleExport} className="btn-icon-sm" title="Descargar Excel">
-                                <FileText size={14} />
-                            </button>
                         </div>
                     </div>
+
+                    <button onClick={handleExport} className="btn" style={{
+                        width: '100%',
+                        marginBottom: '1rem',
+                        background: '#10b981',
+                        color: 'white',
+                        justifyContent: 'center',
+                        fontSize: '1rem',
+                        padding: '1rem'
+                    }}>
+                        <FileText size={20} /> Descargar Excel del Mes
+                    </button>
 
                     <div className="summary-banner mb-4">
                         <div className="summary-item">

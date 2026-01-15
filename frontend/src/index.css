@@ -12,6 +12,20 @@
   --glass-border: rgba(255, 255, 255, 0.1);
 }
 
+body.light-mode {
+  --bg-dark: #f1f5f9;
+  /* Slate 100 */
+  --bg-card: #ffffff;
+  --text-main: #0f172a;
+  /* Slate 900 */
+  --text-muted: #64748b;
+  /* Slate 500 */
+  --glass: rgba(0, 0, 0, 0.05);
+  --glass-border: rgba(0, 0, 0, 0.1);
+  --primary: #4f46e5;
+  /* Slightly darker indigo */
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -99,8 +113,15 @@ body {
 
 /* Animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .animate-fade-in {
