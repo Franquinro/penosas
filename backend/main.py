@@ -374,8 +374,12 @@ def create_admin():
         db.add(user)
         db.commit()
     else:
-        # Optional: Check if we should update password? 
-        # Better not to start messing with passwords on every restart unless explicitly asked.
-        pass
+        # Force update password to match environment variable
+        # This ensures that if we change the env var in Coolify, the DB updates on restart
+        print(f"Updating admin user password for: {admin_user}")
+        existing_user.hashed_password = auth.get_password_hash(admin_password)
+        # Ensure role is admin
+        existing_user.role = "admin"
+        db.commit()
         
     db.close()

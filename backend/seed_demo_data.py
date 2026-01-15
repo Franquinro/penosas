@@ -41,7 +41,10 @@ def seed_data():
                 db.refresh(user)
                 print(f"  Created user {username}")
             else:
-                print(f"  User {username} already exists, clearing previous entries...")
+                print(f"  User {username} already exists. Updating password and clearing entries...")
+                # Reset password to ensure access
+                user.hashed_password = auth.get_password_hash("demo123")
+                
                 # Clear existing entries for a clean slate
                 db.query(models.WorkEntry).filter(models.WorkEntry.user_id == user.id).delete()
                 db.commit()
