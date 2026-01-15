@@ -94,8 +94,14 @@ def update_password(
     if not auth.verify_password(password_data.old_password, current_user.hashed_password):
          raise HTTPException(status_code=400, detail="Incorrect old password")
     
-    current_user.hashed_password = auth.get_password_hash(password_data.new_password)
+    # Re-fetch user in current session to ensure persistence
+    user_in_db = db.query(models.User).filter(models.User.id == current_user.id).first()
+    user_in_db.hashed_password = auth.get_password_hash(password_data.new_password)
+    
+    db.add(user_in_db) # Explicitly add to session
     db.commit()
+    db.refresh(user_in_db)
+    
     return {"message": "Password updated successfully"}
 
 @app.post("/entries/", response_model=schemas.WorkEntry)
