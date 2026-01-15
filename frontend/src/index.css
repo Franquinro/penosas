@@ -244,44 +244,57 @@ body {
     gap: 1.25rem;
   }
 
-  /* Compact list items on mobile */
+  /* 2-row layout for entry items on mobile */
   .entry-item {
-    padding: 0.75rem;
-    gap: 0.5rem;
+    display: grid !important;
+    grid-template-areas:
+      "date amount"
+      "details actions";
+    grid-template-columns: 1fr auto;
+    gap: 0.75rem;
+    padding: 1rem;
     align-items: center;
-    flex-wrap: nowrap !important;
   }
 
   .entry-main {
-    min-width: 0;
-    flex: 1;
+    grid-area: date;
+    display: contents;
+    /* Let children be placed in grid */
   }
 
+  /* We need to adjust Dashboard.tsx slightly or use CSS selectors if possible */
+  /* Since I can't easily change HTML structure without risk, targeting direct children: */
   .entry-date {
-    font-size: 0.8rem;
-    margin-bottom: 0.15rem;
+    grid-area: date;
+    margin-bottom: 0 !important;
+    font-size: 0.85rem;
   }
 
   .entry-details {
+    grid-area: details;
     display: flex;
-    gap: 0.25rem;
-  }
-
-  .badge {
-    padding: 0.1rem 0.4rem;
-    font-size: 0.65rem;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    /* Handle long names by wrapping labels */
   }
 
   .entry-amount {
-    margin: 0 0.5rem;
-    font-size: 0.85rem;
-    white-space: nowrap;
-    width: auto;
+    grid-area: amount;
+    margin: 0 !important;
+    font-size: 1rem;
+    font-weight: 700;
     justify-content: flex-end;
   }
 
   .btn-delete {
-    padding: 0.4rem;
+    grid-area: actions;
+    justify-self: end;
+    padding: 0.5rem;
+  }
+
+  .badge {
+    padding: 0.2rem 0.5rem;
+    font-size: 0.75rem;
   }
 
   .summary-banner {
