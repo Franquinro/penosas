@@ -19,7 +19,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - VITE_API_URL=http://72.62.145.230:8090
+        - VITE_API_URL=${VITE_API_URL}
     ports:
       - "8091:80"
     depends_on:
