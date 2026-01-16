@@ -26,9 +26,10 @@ const Dashboard: React.FC = () => {
     const [task, setTask] = useState('Sacos');
     const [amount, setAmount] = useState<string | number>(1); // Default 1 hour
     const [inputMode, setInputMode] = useState<'decimal' | 'time'>('decimal');
-    const [hours, setHours] = useState(1);
-    const [minutes, setMinutes] = useState(0);
+    const [hours, setHours] = useState<string | number>(1);
+    const [minutes, setMinutes] = useState<string | number>(0);
     const [isLoading, setIsLoading] = useState(false);
+    const [notification, setNotification] = useState<string | null>(null);
 
     // Filter/Chart State
     const [chartData, setChartData] = useState<any[]>([]);
@@ -95,11 +96,17 @@ const Dashboard: React.FC = () => {
         }
     };
 
-    const handleTimeChange = (h: number, m: number) => {
-        setHours(h);
-        setMinutes(m);
-        const decimal = h + (m / 60);
-        setAmount(parseFloat(decimal.toFixed(2))); // Sync back decimal
+    const handleTimeChange = (hStr: string, mStr: string) => {
+        setHours(hStr);
+        setMinutes(mStr);
+
+        const h = hStr === "" ? 0 : parseInt(hStr);
+        const m = mStr === "" ? 0 : parseInt(mStr);
+
+        if (!isNaN(h) && !isNaN(m)) {
+            const decimal = h + (m / 60);
+            setAmount(parseFloat(decimal.toFixed(2)));
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -119,14 +126,24 @@ const Dashboard: React.FC = () => {
         if (inputMode === 'decimal') {
             finalAmount = parseFloat(amount.toString().replace(',', '.'));
         } else {
-            finalAmount = hours + (minutes / 60);
+            const h = hours === "" ? 0 : Number(hours);
+            const m = minutes === "" ? 0 : Number(minutes);
+            finalAmount = h + (m / 60);
         }
+
+        // Round to 2 decimals to avoid weird floating point issues
+        finalAmount = Math.round(finalAmount * 100) / 100;
 
         try {
             await api.post('/entries/', { date, shift, task, amount: finalAmount });
             fetchMonthlyEntries();
             fetchChartData();
-            // Reset form (keep generic logic)
+
+            // Show notification
+            setNotification('¡Horas registradas con éxito!');
+            setTimeout(() => setNotification(null), 3000);
+
+            // Reset form
             setAmount(1);
             setHours(1);
             setMinutes(0);
@@ -184,6 +201,12 @@ const Dashboard: React.FC = () => {
                     </button>
                 </div>
             </header>
+
+            {notification && (
+                <div className="notification-toast animate-fade-in">
+                    {notification}
+                </div>
+            )}
 
             {/* CHART SECTION */}
             <section className="chart-section glass-card mb-4" style={{ marginBottom: '2rem' }}>
@@ -304,11 +327,26 @@ const Dashboard: React.FC = () => {
                             <div className="time-inputs">
                                 <div className="input-group">
                                     <label className="input-label">Horas</label>
-                                    <input type="number" className="input-field" value={hours} onChange={e => handleTimeChange(Number(e.target.value), minutes)} min="0" required />
+                                    <input
+                                        type="number"
+                                        className="input-field"
+                                        value={hours}
+                                        onChange={e => handleTimeChange(e.target.value, minutes.toString())}
+                                        min="0"
+                                        required
+                                    />
                                 </div>
                                 <div className="input-group">
                                     <label className="input-label">Minutos</label>
-                                    <input type="number" className="input-field" value={minutes} onChange={e => handleTimeChange(hours, Number(e.target.value))} min="0" max="59" required />
+                                    <input
+                                        type="number"
+                                        className="input-field"
+                                        value={minutes}
+                                        onChange={e => handleTimeChange(hours.toString(), e.target.value)}
+                                        min="0"
+                                        max="59"
+                                        required
+                                    />
                                 </div>
                                 <div className="helper-text full-width">
                                     Total Decimal: {typeof amount === 'number' ? amount.toFixed(2) : amount} h
@@ -377,7 +415,7 @@ const Dashboard: React.FC = () => {
                                     </div>
                                     <div className="entry-amount">
                                         <Clock size={14} />
-                                        {entry.amount}h
+                                        {Number(entry.amount).toFixed(2)}h
                                     </div>
                                     <button onClick={() => deleteEntry(entry.id)} className="btn-delete">
                                         <Trash2 size={18} />

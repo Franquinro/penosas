@@ -518,3 +518,5 @@ body {
   font-size: 1.25rem;
   color: var(--primary);
 }
+.notification-toast { position: fixed; top: 2rem; right: 2rem; background: var(--success); color: white; padding: 1rem 2rem; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); z-index: 1000; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
+@media (max-width: 768px) { .notification-toast { top: auto; bottom: 2rem; right: 1rem; left: 1rem; justify-content: center; } }
