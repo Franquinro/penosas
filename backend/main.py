@@ -81,6 +81,43 @@ def create_user(
     db.refresh(db_user)
     return db_user
 
+@app.post("/users/bulk", response_model=List[schemas.User])
+def create_users_bulk(
+    users: List[schemas.UserCreate],
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized to create users")
+    
+    created_users = []
+    errors = []
+    
+    for user_data in users:
+        db_user = db.query(models.User).filter(models.User.username == user_data.username).first()
+        if db_user:
+            errors.append(f"User {user_data.username} already exists")
+            continue
+            
+        hashed_password = auth.get_password_hash(user_data.password)
+        new_user = models.User(
+            username=user_data.username,
+            full_name=user_data.full_name,
+            hashed_password=hashed_password,
+            role=user_data.role
+        )
+        db.add(new_user)
+        created_users.append(new_user)
+    
+    if errors and not created_users:
+        raise HTTPException(status_code=400, detail="; ".join(errors))
+        
+    db.commit()
+    for u in created_users:
+        db.refresh(u)
+        
+    return created_users
+
 @app.get("/users/me", response_model=schemas.User)
 async def read_users_me(current_user: models.User = Depends(auth.get_current_active_user)):
     return current_user
