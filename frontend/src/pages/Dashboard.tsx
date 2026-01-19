@@ -175,9 +175,15 @@ const Dashboard: React.FC = () => {
         }
     };
 
+
     const startEdit = (entry: WorkEntry) => {
         setEditingEntry(entry);
-        setEditDate(entry.date);
+
+        // Ensure date is in YYYY-MM-DD format for date input
+        const dateStr = entry.date.toString();
+        const formattedDate = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+        setEditDate(formattedDate);
+
         setEditShift(entry.shift);
         setEditTask(entry.task);
         setEditAmount(entry.amount);
@@ -230,13 +236,17 @@ const Dashboard: React.FC = () => {
 
         finalAmount = Math.round(finalAmount * 100) / 100;
 
+        const updateData = {
+            date: editDate,
+            shift: editShift,
+            task: editTask,
+            amount: finalAmount
+        };
+
+        console.log('Sending update data:', updateData);
+
         try {
-            await api.put(`/entries/${editingEntry.id}`, {
-                date: editDate,
-                shift: editShift,
-                task: editTask,
-                amount: finalAmount
-            });
+            await api.put(`/entries/${editingEntry.id}`, updateData);
 
             fetchMonthlyEntries();
             fetchChartData();
@@ -246,6 +256,7 @@ const Dashboard: React.FC = () => {
             setTimeout(() => setNotification(null), 3000);
         } catch (err: any) {
             console.error('Error al actualizar:', err);
+            console.error('Error response:', err?.response?.data);
             const errorMsg = err?.response?.data?.detail || 'Error al actualizar la entrada';
             alert(errorMsg);
         } finally {
