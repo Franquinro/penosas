@@ -520,3 +520,80 @@ body {
 }
 .notification-toast { position: fixed; top: 2rem; right: 2rem; background: var(--success); color: white; padding: 1rem 2rem; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); z-index: 1000; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
 @media (max-width: 768px) { .notification-toast { top: auto; bottom: 2rem; right: 1rem; left: 1rem; justify-content: center; } }
+
+/* Edit Button */
+.btn-edit {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 0.4rem;
+  transition: 0.2s;
+  margin-right: 0.25rem;
+}
+
+.btn-edit:hover {
+  color: var(--primary);
+  background: rgba(99, 102, 241, 0.1);
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal-content {
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .modal-content {
+    width: 95%;
+    max-height: 85vh;
+  }
+  
+  .entry-item {
+    grid-template-areas:
+      "date amount"
+      "details actions" !important;
+  }
+  
+  .btn-edit {
+    grid-area: actions;
+    justify-self: start;
+    padding: 0.5rem;
+  }
+  
+  .btn-delete {
+    grid-area: actions;
+    justify-self: end;
+    padding: 0.5rem;
+  }
+}

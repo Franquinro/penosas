@@ -11,6 +11,12 @@ class WorkEntryBase(BaseModel):
 class WorkEntryCreate(WorkEntryBase):
     pass
 
+class WorkEntryUpdate(BaseModel):
+    date: Optional[date] = None
+    shift: Optional[str] = None
+    task: Optional[str] = None
+    amount: Optional[float] = None
+
 class WorkEntry(WorkEntryBase):
     id: int
     user_id: int

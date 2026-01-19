@@ -177,6 +177,30 @@ def read_work_entries(
     entries = query.order_by(models.WorkEntry.date.desc()).offset(skip).limit(limit).all()
     return entries
 
+@app.put("/entries/{entry_id}", response_model=schemas.WorkEntry)
+def update_work_entry(
+    entry_id: int,
+    entry_update: schemas.WorkEntryUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    entry = db.query(models.WorkEntry).filter(
+        models.WorkEntry.id == entry_id, 
+        models.WorkEntry.user_id == current_user.id
+    ).first()
+    
+    if not entry:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    
+    # Update only provided fields
+    update_data = entry_update.dict(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(entry, field, value)
+    
+    db.commit()
+    db.refresh(entry)
+    return entry
+
 @app.delete("/entries/{entry_id}")
 def delete_work_entry(
     entry_id: int,
@@ -189,6 +213,7 @@ def delete_work_entry(
     db.delete(entry)
     db.commit()
     return {"ok": True}
+
 
 @app.get("/entries/stats/monthly")
 def get_monthly_stats(

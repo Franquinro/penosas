@@ -38,6 +38,7 @@ dist-ssr/
 .DS_Store
 
 # Environments
+.usuarios
 .env
 .env.local
 .env.development.local

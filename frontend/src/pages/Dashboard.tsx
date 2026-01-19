@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import api from '../services/api';
-import { Plus, Trash2, Calendar, Clock, LogOut, ShieldCheck, BarChart2, FileText, User, Sun, Moon } from 'lucide-react';
+import { Plus, Trash2, Calendar, Clock, LogOut, ShieldCheck, BarChart2, FileText, User, Sun, Moon, Edit2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
@@ -35,6 +35,16 @@ const Dashboard: React.FC = () => {
     const [chartData, setChartData] = useState<any[]>([]);
     const [summaryDate, setSummaryDate] = useState(new Date()); // For monthly summary filter
     const [chartMode, setChartMode] = useState<'hours' | 'euros'>('hours');
+
+    // Edit State
+    const [editingEntry, setEditingEntry] = useState<WorkEntry | null>(null);
+    const [editDate, setEditDate] = useState('');
+    const [editShift, setEditShift] = useState('');
+    const [editTask, setEditTask] = useState('');
+    const [editAmount, setEditAmount] = useState<string | number>(0);
+    const [editInputMode, setEditInputMode] = useState<'decimal' | 'time'>('decimal');
+    const [editHours, setEditHours] = useState<string | number>(0);
+    const [editMinutes, setEditMinutes] = useState<string | number>(0);
 
     useEffect(() => {
         fetchMonthlyEntries();
@@ -162,6 +172,82 @@ const Dashboard: React.FC = () => {
             fetchChartData();
         } catch (err) {
             alert('Error al borrar');
+        }
+    };
+
+    const startEdit = (entry: WorkEntry) => {
+        setEditingEntry(entry);
+        setEditDate(entry.date);
+        setEditShift(entry.shift);
+        setEditTask(entry.task);
+        setEditAmount(entry.amount);
+
+        // Calculate hours and minutes from amount
+        const h = Math.floor(entry.amount);
+        const m = Math.round((entry.amount - h) * 60);
+        setEditHours(h);
+        setEditMinutes(m);
+    };
+
+    const handleEditDecimalChange = (val: string) => {
+        const cleanVal = val.replace(/[^0-9.,]/g, '').replace(',', '.');
+        setEditAmount(val);
+
+        const numVal = parseFloat(cleanVal);
+        if (!isNaN(numVal)) {
+            setEditHours(Math.floor(numVal));
+            setEditMinutes(Math.round((numVal - Math.floor(numVal)) * 60));
+        }
+    };
+
+    const handleEditTimeChange = (hStr: string, mStr: string) => {
+        setEditHours(hStr);
+        setEditMinutes(mStr);
+
+        const h = hStr === "" ? 0 : parseInt(hStr);
+        const m = mStr === "" ? 0 : parseInt(mStr);
+
+        if (!isNaN(h) && !isNaN(m)) {
+            const decimal = h + (m / 60);
+            setEditAmount(parseFloat(decimal.toFixed(2)));
+        }
+    };
+
+    const handleEditSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingEntry) return;
+
+        setIsLoading(true);
+        let finalAmount = 0;
+
+        if (editInputMode === 'decimal') {
+            finalAmount = parseFloat(editAmount.toString().replace(',', '.'));
+        } else {
+            const h = editHours === "" ? 0 : Number(editHours);
+            const m = editMinutes === "" ? 0 : Number(editMinutes);
+            finalAmount = h + (m / 60);
+        }
+
+        finalAmount = Math.round(finalAmount * 100) / 100;
+
+        try {
+            await api.put(`/entries/${editingEntry.id}`, {
+                date: editDate,
+                shift: editShift,
+                task: editTask,
+                amount: finalAmount
+            });
+
+            fetchMonthlyEntries();
+            fetchChartData();
+            setEditingEntry(null);
+
+            setNotification('¡Entrada actualizada con éxito!');
+            setTimeout(() => setNotification(null), 3000);
+        } catch (err) {
+            alert('Error al actualizar la entrada');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -417,7 +503,10 @@ const Dashboard: React.FC = () => {
                                         <Clock size={14} />
                                         {Number(entry.amount).toFixed(2)}h
                                     </div>
-                                    <button onClick={() => deleteEntry(entry.id)} className="btn-delete">
+                                    <button onClick={() => startEdit(entry)} className="btn-edit" title="Editar">
+                                        <Edit2 size={18} />
+                                    </button>
+                                    <button onClick={() => deleteEntry(entry.id)} className="btn-delete" title="Borrar">
                                         <Trash2 size={18} />
                                     </button>
                                 </div>
@@ -427,9 +516,134 @@ const Dashboard: React.FC = () => {
                 </section>
             </div>
 
+            {/* EDIT MODAL */}
+            {editingEntry && (
+                <div className="modal-overlay" onClick={() => setEditingEntry(null)}>
+                    <div className="modal-content glass-card" onClick={(e) => e.stopPropagation()}>
+                        <div className="section-title">
+                            <Edit2 size={20} className="text-primary" />
+                            <h3>Editar Entrada</h3>
+                        </div>
+                        <form onSubmit={handleEditSubmit}>
+                            <div className="input-group">
+                                <label className="input-label">Fecha</label>
+                                <input
+                                    type="date"
+                                    className="input-field"
+                                    value={editDate}
+                                    onChange={e => setEditDate(e.target.value)}
+                                    min="2025-01-01"
+                                    max={`${new Date().getFullYear()}-12-31`}
+                                    required
+                                />
+                            </div>
+                            <div className="input-group">
+                                <label className="input-label">Turno</label>
+                                <select className="input-field" value={editShift} onChange={e => setEditShift(e.target.value)}>
+                                    <option>Mañana</option>
+                                    <option>Tarde</option>
+                                    <option>Noche</option>
+                                </select>
+                            </div>
+                            <div className="input-group">
+                                <label className="input-label">Tarea</label>
+                                <select className="input-field" value={editTask} onChange={e => setEditTask(e.target.value)}>
+                                    <option>Sacos</option>
+                                    <option>Quemadores</option>
+                                    <option>Filtros FO/Lodos</option>
+                                    <option>Magnesio</option>
+                                    <option>Derrames/Fugas</option>
+                                </select>
+                            </div>
+
+                            {/* DUAL INPUT MODE FOR EDIT */}
+                            <div className="mode-toggle mb-2">
+                                <span className="text-sm text-muted">Modo: </span>
+                                <button
+                                    type="button"
+                                    className={`mode-btn ${editInputMode === 'decimal' ? 'active' : ''}`}
+                                    onClick={() => setEditInputMode('decimal')}
+                                >Decimal</button>
+                                <button
+                                    type="button"
+                                    className={`mode-btn ${editInputMode === 'time' ? 'active' : ''}`}
+                                    onClick={() => setEditInputMode('time')}
+                                >Horas:Min</button>
+                            </div>
+
+                            {editInputMode === 'decimal' ? (
+                                <div className="input-group">
+                                    <label className="input-label">Horas (Decimal)</label>
+                                    <input
+                                        type="text"
+                                        className="input-field"
+                                        value={editAmount}
+                                        onChange={e => handleEditDecimalChange(e.target.value)}
+                                        placeholder="Ej: 1.5"
+                                        required
+                                    />
+                                    <div className="helper-text">
+                                        Equivale a: {editHours}h {editMinutes}m
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="time-inputs">
+                                    <div className="input-group">
+                                        <label className="input-label">Horas</label>
+                                        <input
+                                            type="number"
+                                            className="input-field"
+                                            value={editHours}
+                                            onChange={e => handleEditTimeChange(e.target.value, editMinutes.toString())}
+                                            min="0"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="input-group">
+                                        <label className="input-label">Minutos</label>
+                                        <input
+                                            type="number"
+                                            className="input-field"
+                                            value={editMinutes}
+                                            onChange={e => handleEditTimeChange(editHours.toString(), e.target.value)}
+                                            min="0"
+                                            max="59"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="helper-text full-width">
+                                        Total Decimal: {typeof editAmount === 'number' ? editAmount.toFixed(2) : editAmount} h
+                                    </div>
+                                </div>
+                            )}
+
+                            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setEditingEntry(null)}
+                                    className="btn"
+                                    style={{ flex: 1, background: 'var(--surface)', color: 'var(--text)' }}
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="btn btn-primary"
+                                    style={{ flex: 1 }}
+                                    disabled={isLoading}
+                                >
+                                    {isLoading ? 'Actualizando...' : 'Actualizar'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 };
 
 export default Dashboard;
+
 
