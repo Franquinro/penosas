@@ -194,10 +194,11 @@ def update_work_entry(
         if not entry:
             raise HTTPException(status_code=404, detail="Entry not found")
         
-        # Update only provided fields
-        update_data = entry_update.model_dump(exclude_unset=True)
-        for field, value in update_data.items():
-            setattr(entry, field, value)
+        # Update all fields
+        entry.date = entry_update.date
+        entry.shift = entry_update.shift
+        entry.task = entry_update.task
+        entry.amount = entry_update.amount
         
         db.commit()
         db.refresh(entry)

@@ -257,7 +257,18 @@ const Dashboard: React.FC = () => {
         } catch (err: any) {
             console.error('Error al actualizar:', err);
             console.error('Error response:', err?.response?.data);
-            const errorMsg = err?.response?.data?.detail || 'Error al actualizar la entrada';
+            console.error('Error detail:', JSON.stringify(err?.response?.data?.detail, null, 2));
+
+            let errorMsg = 'Error al actualizar la entrada';
+            if (err?.response?.data?.detail) {
+                if (Array.isArray(err.response.data.detail)) {
+                    errorMsg = err.response.data.detail.map((e: any) =>
+                        `${e.loc?.join('.')}: ${e.msg}`
+                    ).join('\n');
+                } else {
+                    errorMsg = err.response.data.detail;
+                }
+            }
             alert(errorMsg);
         } finally {
             setIsLoading(false);

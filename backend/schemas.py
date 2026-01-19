@@ -11,11 +11,10 @@ class WorkEntryBase(BaseModel):
 class WorkEntryCreate(WorkEntryBase):
     pass
 
-class WorkEntryUpdate(BaseModel):
-    date: Optional[date] = None
-    shift: Optional[str] = None
-    task: Optional[str] = None
-    amount: Optional[float] = None
+class WorkEntryUpdate(WorkEntryBase):
+    # For updates, we require all fields to be sent
+    # This simplifies validation and avoids Optional issues
+    pass
 
 class WorkEntry(WorkEntryBase):
     id: int
