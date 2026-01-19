@@ -147,11 +147,12 @@ def create_work_entry(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_active_user)
 ):
-    db_entry = models.WorkEntry(**entry.dict(), user_id=current_user.id)
+    db_entry = models.WorkEntry(**entry.model_dump(), user_id=current_user.id)
     db.add(db_entry)
     db.commit()
     db.refresh(db_entry)
     return db_entry
+
 
 @app.get("/entries/", response_model=List[schemas.WorkEntry])
 def read_work_entries(
@@ -193,13 +194,14 @@ def update_work_entry(
         raise HTTPException(status_code=404, detail="Entry not found")
     
     # Update only provided fields
-    update_data = entry_update.dict(exclude_unset=True)
+    update_data = entry_update.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(entry, field, value)
     
     db.commit()
     db.refresh(entry)
     return entry
+
 
 @app.delete("/entries/{entry_id}")
 def delete_work_entry(
