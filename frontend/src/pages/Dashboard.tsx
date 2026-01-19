@@ -244,8 +244,10 @@ const Dashboard: React.FC = () => {
 
             setNotification('¡Entrada actualizada con éxito!');
             setTimeout(() => setNotification(null), 3000);
-        } catch (err) {
-            alert('Error al actualizar la entrada');
+        } catch (err: any) {
+            console.error('Error al actualizar:', err);
+            const errorMsg = err?.response?.data?.detail || 'Error al actualizar la entrada';
+            alert(errorMsg);
         } finally {
             setIsLoading(false);
         }
