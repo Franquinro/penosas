@@ -57,3 +57,6 @@ class AnnualRate(BaseModel):
 class UserPasswordUpdate(BaseModel):
     old_password: str
     new_password: str
+
+class UserAdminPasswordReset(BaseModel):
+    new_password: str

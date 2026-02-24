@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import { Download, Users, FileText, Activity, LogOut, ArrowLeft, Trash2, User as UserIcon } from 'lucide-react';
+import { Download, Users, FileText, Activity, LogOut, ArrowLeft, Trash2, Key, User as UserIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface User {
@@ -65,6 +65,18 @@ const AdminDashboard: React.FC = () => {
             fetchSummary(); // Refresh stats
         } catch (err) {
             alert('Error al eliminar usuario');
+        }
+    };
+
+    const handleResetPassword = async (userId: number, username: string) => {
+        const newPassword = prompt(`Introduce la nueva contraseña para el usuario "${username}":`);
+        if (!newPassword || newPassword.trim() === '') return;
+
+        try {
+            await api.put(`/admin/users/${userId}/password`, { new_password: newPassword });
+            alert('Contraseña actualizada correctamente');
+        } catch (err) {
+            alert('Error al actualizar la contraseña');
         }
     };
 
@@ -267,11 +279,16 @@ const AdminDashboard: React.FC = () => {
                                                 <span>@{u.username} • {u.role}</span>
                                             </div>
                                         </div>
-                                        {u.username !== 'admin' && (
-                                            <button onClick={() => handleDeleteUser(u.id, u.username)} className="btn-delete-user">
-                                                <Trash2 size={18} />
+                                        <div className="user-actions">
+                                            <button onClick={() => handleResetPassword(u.id, u.username)} className="btn-action-user" title="Cambiar contraseña">
+                                                <Key size={18} />
                                             </button>
-                                        )}
+                                            {u.username !== 'admin' && (
+                                                <button onClick={() => handleDeleteUser(u.id, u.username)} className="btn-delete-user" title="Eliminar usuario">
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -317,6 +334,9 @@ const AdminDashboard: React.FC = () => {
         .user-main { display: flex; align-items: center; gap: 1rem; }
         .user-details { display: flex; flex-direction: column; }
         .user-details span { font-size: 0.8125rem; color: var(--text-muted); }
+        .user-actions { display: flex; gap: 0.5rem; }
+        .btn-action-user { background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 0.5rem; border-radius: 0.5rem; transition: 0.2s; }
+        .btn-action-user:hover { color: var(--primary); background: rgba(99, 102, 241, 0.1); }
         .btn-delete-user { background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 0.5rem; border-radius: 0.5rem; transition: 0.2s; }
         .btn-delete-user:hover { color: var(--error); background: rgba(239, 68, 68, 0.1); }
         .btn-secondary { display: flex; align-items: center; gap: 0.5rem; background: transparent; border: 1px solid var(--glass-border); color: var(--text-main); padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; }

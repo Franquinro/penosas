@@ -445,6 +445,25 @@ def delete_user(
     db.commit()
     return {"message": "User deleted successfully"}
 
+@app.put("/admin/users/{user_id}/password")
+def admin_reset_password(
+    user_id: int,
+    password_data: schemas.UserAdminPasswordReset,
+    current_user: models.User = Depends(auth.get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    user_to_update = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user_to_update:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    user_to_update.hashed_password = auth.get_password_hash(password_data.new_password)
+    db.commit()
+    
+    return {"message": "Password updated successfully by admin"}
+
 # Seed Admin User (Quick & Dirty for initial setup)
 import os
 
